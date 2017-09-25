@@ -118,17 +118,24 @@
      */
     node.onaudioprocess = function(audioProcessingEvent) {
       if (!recording) {
-
         return;
       }
 
-      worker.postMessage({
-        command: 'record',
-        buffer: [
-          audioProcessingEvent.inputBuffer.getChannelData(0),
-        ]
+      var buffer = audioProcessingEvent.inputBuffer.getChannelData(0);
+      var bufferSum = buffer.reduce(function(sum, val, i, array) {
+        return sum + Math.abs(val);
       });
-      startSilenceDetection();
+      if(bufferSum > 0) {
+        worker.postMessage({
+          command: 'record',
+          buffer: [
+            buffer
+          ]
+        });
+        startSilenceDetection();
+      } else {
+        console.log("Nothing but silence so far...");
+      }
     };
 
     var analyser = source.context.createAnalyser();
@@ -170,7 +177,10 @@
     };
 
     var createRecorder = function() {
-      return recorder(audio_context.createMediaStreamSource(audio_stream, worker));
+      var source = audio_context.createMediaStreamSource(audio_stream, worker);
+      source.crossOrigin="anonymous";
+      source.crossorigin="anonymous";
+      return recorder(source);
     };
 
     return {

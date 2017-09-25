@@ -3,10 +3,9 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>AmazonLex</title>
-    <meta name="author" content="lafranch">
-    <meta name="description" content="Lex Runtime example from the browser.">
-    <meta name="keywords" content="Amazon Lex, SDK, Runtime, Browser, JavaScript">
+    <title>Audio Training Data Capture</title>
+    <meta name="author" content="ryangross,lafranch">
+    <meta name="description" content="Capture and upload of audio training words from the browser.">
     <link rel="icon" type="image/png" href="images/favicon-32x32.png" sizes="32x32" />
     <link rel="icon" type="image/png" href="images/favicon-16x16.png" sizes="16x16" />
     <link rel="stylesheet" href="css/style.css">
@@ -14,12 +13,20 @@
 
 <body class="wrapper">
     <div class="audio-control">
+        <p id="prompt">
+                Click the record button and then say the word below. 
+                If you see the same word again, say it differently 
+                (louder, softer, happier, angrier, etc.):
+        </p>
         <p id="audio-control" class="white-circle">
-            <img src="images/lex.png">
+            <img src="images/player_record.png">
             <canvas class="visualizer"></canvas>
         </p>
         <p><span id="message"></span></p>
-        <p>
+        <p>&nbsp;</p>
+        <p>&nbsp;</p>
+        <p><a href="privacy.html">Privacy Policy</a></p>
+        <!-- <p>
             <input type="text" id="ACCESS_KEY_ID" name="ACCESS KEY ID" placeholder="Access Key Id" />
         </p>
         <p>
@@ -27,7 +34,7 @@
         </p>
         <p>
             <input type="text" id="BOT" name="BOT" placeholder="Bot Name" />
-        </p>
+        </p> -->
     </div>
     <script src="https://sdk.amazonaws.com/js/aws-sdk-2.48.0.min.js"></script>
     <script type="text/javascript">

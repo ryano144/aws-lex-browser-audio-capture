@@ -104,6 +104,12 @@
       recorder.clear();
     };
 
+    var clear = function() {
+      if(recorder) {
+        recorder.clear();      
+      }
+    }
+
     /**
      * On audio supported callback: `onAudioSupported`.
      *
@@ -116,11 +122,15 @@
      * @param {onAudioSupported} callback - Called with the result.
      */
     var supportsAudio = function(callback) {
-      if (navigator.mediaDevices.getUserMedia) {
+      var isChrome = !!window.chrome      
+      if (!isChrome && navigator.mediaDevices.getUserMedia) {
         audioRecorder = lexaudio.audioRecorder();
         audioRecorder.requestDevice()
           .then(function(stream) { callback(true); })
-          .catch(function(error) { callback(false); });
+          .catch(function(error) { 
+            console.log("Error getting audio device: " + error, error);
+            callback(false); 
+          });
       } else {
         callback(false);
       }
@@ -130,6 +140,7 @@
       stopRecording: stopRecording,
       exportWAV: exportWAV,
       play: play,
+      clear: clear,
       supportsAudio: supportsAudio
     };
   };

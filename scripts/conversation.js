@@ -22,17 +22,69 @@
     var lexruntime, params,
       message = document.getElementById('message'),
       audioControl = lexaudio.audioControl(),
-      renderer = lexaudio.renderer();
-
+      renderer = lexaudio.renderer(),
+      uploadBucketName = 'tensorflow-audio-training-data',
+      bucketRegion = 'us-east-1',
+      IdentityPoolId = 'us-east-1:88da0e8d-a30a-4704-b284-4476f0336f6b',
+      done = "Thanks, that's all the words for now";
+      
+      AWS.config.update({
+        region: bucketRegion,
+        credentials: new AWS.CognitoIdentityCredentials({
+          IdentityPoolId: IdentityPoolId
+        })
+      });
+      
+      var s3 = new AWS.S3({
+        apiVersion: '2006-03-01',
+        params: {Bucket: uploadBucketName}
+      });
+      s3.getBucketLocation();
+      
     var Conversation = function(messageEl) {
       var message, audioInput, audioOutput, currentState;
 
       this.messageEl = messageEl;
 
       this.renderer = renderer;
-
+      this.words = [
+        "Hello",
+        "Alexa",
+        "Extra",
+        "Agenda",
+        "Alexis",
+        "Banana",
+        "Alexa_",
+        "Umbrella",
+        "Election",
+        "Elsa",
+        "Agenda_",
+        "Vanilla",
+        "Extra_",
+        "Alexa__",
+        "Dyslexic",
+        "Alexis_",
+        "Election_",
+        "The next one",
+        "A texan",    
+        "Alexa___"
+      ];
+      this.wordIndex = this.words.length-1;
+      this.iteration = 0;
+      var self = this;
       this.messages = Object.freeze({
-        PASSIVE: 'Passive...',
+        PASSIVE: function() { 
+          if(self.wordIndex+1 == self.words.length) {
+            self.wordIndex = 0;
+          } else {
+            self.wordIndex++;            
+          }
+          var word = self.words[self.wordIndex];
+          for (var i = 0; i < self.iteration; i++) {
+            word = word + "_";          
+          }
+          return word;
+        },
         LISTENING: 'Listening...',
         SENDING: 'Sending...',
         SPEAKING: 'Speaking...'
@@ -64,11 +116,22 @@
 
     var Initial = function(state) {
       this.state = state;
-      state.message = state.messages.PASSIVE;
+      audioControl.clear();
+      
+      var word = state.messages.PASSIVE();
+      state.word = word.replace(/_/g,"");
+      state.suffix = word.replace(/[^_]/g,"");
+      if(state.word == done) {
+        var button = document.getElementById('audio-control');
+        button.parentNode.removeChild(button);
+      }
+      state.message = state.word;
       this.advanceConversation = function() {
-        state.renderer.prepCanvas();
-        audioControl.startRecording(state.onSilence, state.renderer.visualizeAudioBuffer);
-        state.transition(new Listening(state));
+        if(state.word != done) {
+          state.renderer.prepCanvas();
+          audioControl.startRecording(state.onSilence, state.renderer.visualizeAudioBuffer);
+          state.transition(new Listening(state));
+        }
       }
     };
 
@@ -87,14 +150,15 @@
       this.state = state;
       state.message = state.messages.SENDING;
       this.advanceConversation = function() {
-        params.inputStream = state.audioInput;
-        lexruntime.postContent(params, function(err, data) {
+        s3.upload({
+          Key: state.word.replace(/ /g, "_") + "/" + AWS.config.credentials.accessKeyId + state.suffix + ".wav",
+          Body: state.audioInput,
+          ACL: 'bucket-owner-full-control'
+        }, function(err, data) {
           if (err) {
-            console.log(err, err.stack);
-          } else {
-            state.audioOutput = data;
-            state.transition(new Speaking(state));
+            return alert('There was an error uploading your audio: ', err.message);
           }
+          state.transition(new Initial(state));
         });
       }
     };
@@ -120,17 +184,6 @@
         var conversation = new Conversation(message);
         message.textContent = conversation.message;
         document.getElementById('audio-control').onclick = function() {
-          params = {
-            botAlias: '$LATEST',
-            botName: document.getElementById('BOT').value,
-            contentType: 'audio/x-l16; sample-rate=16000',
-            userId: 'BlogPostTesting',
-            accept: 'audio/mpeg'
-          };
-          lexruntime = new AWS.LexRuntime({
-            region: 'us-east-1',
-            credentials: new AWS.Credentials(document.getElementById('ACCESS_KEY_ID').value, document.getElementById('SECRET_KEY').value, null)
-          });
           conversation.advanceConversation();
         };
       } else {
